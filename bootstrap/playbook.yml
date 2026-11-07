@@ -1,0 +1,100 @@
+---
+- name: Configure CMR621 monitoring
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    omd_site: demo
+    monitoring_inventory: "{{ lookup('ansible.builtin.file', playbook_dir + '/inventory/devices.yml') | from_yaml }}"
+    snmp_community: "{{ lookup('ansible.builtin.file', '/run/secrets/snmp_community') | trim }}"
+  tasks:
+    - name: Select Nagios Core
+      ansible.builtin.command:
+        argv:
+          - omd
+          - config
+          - "{{ omd_site }}"
+          - set
+          - CORE
+          - nagios
+      changed_when: false
+
+    - name: Select Thruk as the default UI
+      ansible.builtin.command:
+        argv:
+          - omd
+          - config
+          - "{{ omd_site }}"
+          - set
+          - DEFAULT_GUI
+          - thruk
+      changed_when: false
+
+    - name: Set the administrator password from the Docker secret
+      ansible.builtin.command:
+        argv:
+          - su
+          - -
+          - "{{ omd_site }}"
+          - -c
+          - "set_admin_password {{ lookup('ansible.builtin.file', '/run/secrets/omd_admin_password') | trim | quote }}"
+      changed_when: false
+      no_log: true
+
+    - name: Validate the SNMP community character set
+      ansible.builtin.assert:
+        that:
+          - snmp_community is match('^[A-Za-z0-9_.-]+$')
+        fail_msg: SNMP community must contain only letters, digits, periods, underscores, or hyphens.
+      no_log: true
+
+    - name: Store the SNMP community in the runtime-only Nagios resource file
+      ansible.builtin.lineinfile:
+        path: "/omd/sites/{{ omd_site }}/etc/nagios/resource.cfg"
+        regexp: '^\$USER2\$='
+        line: "$USER2$={{ snmp_community }}"
+        owner: "{{ omd_site }}"
+        group: "{{ omd_site }}"
+        mode: "0600"
+      no_log: true
+
+    - name: Create persistent check_nwc_health state directory
+      ansible.builtin.file:
+        path: "/omd/sites/{{ omd_site }}/var/check_nwc_health"
+        state: directory
+        owner: "{{ omd_site }}"
+        group: "{{ omd_site }}"
+        mode: "0750"
+
+    - name: Validate that enabled devices have addresses
+      ansible.builtin.assert:
+        that:
+          - item.address is string
+          - item.address | length > 0
+          - item.kind in ['network', 'camera']
+        fail_msg: "Enabled device {{ item.id }} needs a valid address and kind."
+      loop: "{{ monitoring_inventory.devices | selectattr('enabled', 'equalto', true) | list }}"
+
+    - name: Install host groups
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/nagios/hostgroups.cfg"
+        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-hostgroups.cfg"
+        owner: "{{ omd_site }}"
+        group: "{{ omd_site }}"
+        mode: "0644"
+
+    - name: Install SNMP check command
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/nagios/commands.cfg"
+        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-commands.cfg"
+        owner: "{{ omd_site }}"
+        group: "{{ omd_site }}"
+        mode: "0644"
+
+    - name: Render enabled device objects from the Git inventory
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/devices.cfg.j2"
+        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-devices.cfg"
+        owner: "{{ omd_site }}"
+        group: "{{ omd_site }}"
+        mode: "0644"

@@ -1,0 +1,90 @@
+# Generated from the Git inventory. Edit bootstrap/inventory/devices.yml instead.
+{% for device in monitoring_inventory.devices if device.enabled | bool %}
+define host {
+    use generic-host
+    host_name {{ device.id }}
+    alias {{ device.alias }}
+    address {{ device.address }}
+    hostgroups {{ 'ip_cameras' if device.kind == 'camera' else 'network_devices' }}
+    check_command check-host-alive
+    max_check_attempts 3
+    check_interval 1
+    retry_interval 1
+}
+{% if device.kind == 'network' %}
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description SNMP agent and uptime
+    check_command check_snmp_sysuptime_cmr621
+    max_check_attempts 3
+    check_interval 5
+    retry_interval 1
+}
+{% if device.vendor == 'cisco' %}
+{% set cpu = monitoring_inventory.thresholds.cpu %}
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description CPU load
+    check_command check_nwc_cpu_cmr621!{{ cpu.warning_percent }}!{{ cpu.critical_percent }}
+    max_check_attempts 5
+    check_interval 1
+    retry_interval 1
+}
+{% set memory = monitoring_inventory.thresholds.memory %}
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description Memory usage
+    check_command check_nwc_memory_cmr621!{{ memory.warning_percent }}!{{ memory.critical_percent }}
+    max_check_attempts 3
+    check_interval 5
+    retry_interval 1
+}
+{% endif %}
+{% for interface in device.interfaces | default([]) %}
+{% if interface.expected_up | default(true) %}
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description Interface {{ interface.name }} status
+    check_command check_nwc_interface_status_cmr621!{{ interface.name }}
+    max_check_attempts 3
+    check_interval 1
+    retry_interval 1
+}
+{% endif %}
+{% set utilization = monitoring_inventory.thresholds.interface_utilization %}
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description Interface {{ interface.name }} utilization
+    check_command check_nwc_interface_usage_cmr621!{{ interface.name }}!{{ utilization.warning_percent }}!{{ utilization.critical_percent }}
+    max_check_attempts 3
+    check_interval 5
+    retry_interval 1
+}
+
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description Interface {{ interface.name }} errors
+    check_command check_nwc_interface_errors_cmr621!{{ interface.name }}
+    max_check_attempts 3
+    check_interval 5
+    retry_interval 1
+}
+
+define service {
+    use generic-service
+    host_name {{ device.id }}
+    service_description Interface {{ interface.name }} discards
+    check_command check_nwc_interface_discards_cmr621!{{ interface.name }}
+    max_check_attempts 3
+    check_interval 5
+    retry_interval 1
+}
+{% endfor %}
+{% endif %}
+{% endfor %}
