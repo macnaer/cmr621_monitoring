@@ -1,0 +1,8 @@
+# Local secrets and environment files
+/secrets/*
+!/secrets/README.md
+.env
+
+# Runtime data
+/data/
+*.log
