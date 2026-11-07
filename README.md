@@ -1,4 +1,3 @@
-successfully downloaded text file (SHA: fd51dd492f55c15ea32e2030fbca0fe34bc3bb05)
 # CMR621 Network Monitoring
 
 Initial Docker-based implementation for the CMR621 network monitoring system.
