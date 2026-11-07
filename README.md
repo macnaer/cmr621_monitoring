@@ -44,6 +44,22 @@ Create two local secret files before starting Compose. Never commit them:
 - `secrets/omd_admin_password` — password for the OMD/Thruk administrator.
 - `secrets/snmp_community` — the read-only SNMPv2c community configured on the network devices.
 
+The SNMP file contains only the exact community configured on the devices, on one line, without quotes or a `COMMUNITY=` prefix. Example format only — replace this placeholder and do not use it as a real credential:
+
+```text
+replace-with-the-existing-read-only-community
+```
+
+Generate the administrator password on the Docker VM and save only the password string in the file:
+
+```sh
+mkdir -p secrets
+openssl rand -base64 36 | tr -d '\n' > secrets/omd_admin_password
+chmod 600 secrets/omd_admin_password
+```
+
+The file must contain one line with the password itself, without quotes or a variable name. For example, its format is `one-random-password-string` — do not use that literal example as a real password. The SNMP file should likewise contain only the existing read-only community string on one line.
+
 The initial SNMP command uses one shared community for Cisco and MikroTik devices. If their communities differ, add named credential profiles before enabling the affected devices. Use a high-entropy community containing only letters, digits, periods, underscores, or hyphens; SNMPv2c sends it unencrypted on the network.
 
 No credentials are committed. The private management IP for `rtr1.academy` is intentionally recorded in the inventory; SNMP secrets remain in ignored local files.
