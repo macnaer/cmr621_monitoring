@@ -48,7 +48,7 @@ Generate the administrator password on the Docker VM and save only the password 
 
 ```sh
 mkdir -p secrets
-openssl rand -base64 36 | tr -d '\\n' > secrets/omd_admin_password
+openssl rand -base64 36 | tr -d '\n' > secrets/omd_admin_password
 chmod 600 secrets/omd_admin_password
 ```
 
