@@ -5,12 +5,12 @@ Initial Docker-based implementation for the CMR621 network monitoring system.
 ## Stack
 
 - Host: Ubuntu Server 26.04 VM with Docker Compose.
-- Runtime: OMD Labs 5.70 container, configured to use Nagios Core and Thruk.
+- Runtime: OMD Labs 5.70 container, configured to use Naemon and Thruk.
 - Configuration source of truth: this Git repository.
 - Notifications: Telegram is intentionally deferred to the final implementation phase.
 - Grafana and centralized syslog are out of scope for the current deployment.
 
-The OMD image bundles optional tools, but this project exposes only its HTTPS web endpoint and configures Nagios Core with Thruk as the default UI. The container is Debian-based; the VM host remains Ubuntu Server 26.04.
+The OMD image bundles optional tools, but this project exposes only its HTTPS web endpoint and configures Naemon with Thruk as the default UI. OMD Labs 5.70 does not include Nagios Core; Naemon is the supported Nagios-compatible core in this image. The container is Debian-based; the VM host remains Ubuntu Server 26.04.
 
 ## Monitored devices
 
@@ -78,10 +78,10 @@ The image uses a self-signed TLS certificate by default, so the browser will sho
 
 ## Configuration workflow without CI
 
-1. Make approved changes in Git; do not edit the live Nagios configuration independently on the VM.
+1. Make approved changes in Git; do not edit the live Naemon configuration independently on the VM.
 2. On the VM, pull the approved commit.
-3. Validate the Nagios configuration before restarting the core: `docker compose exec monitoring su - demo -c 'nagios -v etc/nagios/nagios.cfg'`.
-4. Restart the core after a successful validation: `docker compose exec monitoring su - demo -c 'omd restart nagios'`.
+3. Validate the Naemon configuration before restarting the core: `docker compose exec monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'`.
+4. Restart the core after a successful validation: `docker compose exec monitoring su - demo -c 'omd restart naemon'`.
 5. Review the Thruk UI and container logs.
 
 The OMD startup playbook applies the tracked inventory and configuration when the container starts. Keep a known-good Git commit available for rollback.
