@@ -1,3 +1,4 @@
+successfully downloaded text file (SHA: fd51dd492f55c15ea32e2030fbca0fe34bc3bb05)
 # CMR621 Network Monitoring
 
 Initial Docker-based implementation for the CMR621 network monitoring system.
@@ -43,6 +44,12 @@ Create two local secret files before starting Compose. Never commit them:
 
 - `secrets/omd_admin_password` — password for the OMD/Thruk administrator.
 - `secrets/snmp_community` — the read-only SNMPv2c community configured on the network devices.
+
+The SNMP file contains only the exact community configured on the devices, on one line, without quotes or a `COMMUNITY=` prefix. Example format only — replace this placeholder and do not use it as a real credential:
+
+```text
+replace-with-the-existing-read-only-community
+```
 
 Generate the administrator password on the Docker VM and save only the password string in the file:
 
