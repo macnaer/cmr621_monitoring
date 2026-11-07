@@ -1,4 +1,3 @@
-successfully downloaded text file (SHA: 60a16a89df19529ab5c3b708229d6ca7bab3d817)
 # Local secrets
 
 This directory is ignored by Git except for this README. Create the files locally before starting the Compose stack:
