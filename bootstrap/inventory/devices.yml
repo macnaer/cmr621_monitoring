@@ -1,0 +1,120 @@
+schema_version: 1
+
+thresholds:
+  cpu:
+    warning_percent: 80
+    critical_percent: 95
+    sustained_minutes: 5
+  memory:
+    warning_percent: 80
+    critical_percent: 90
+  interface_utilization:
+    warning_percent: 80
+    critical_percent: 90
+  interface_errors_and_discards:
+    method: counter_delta
+
+devices:
+  - id: cisco-catalyst-2960-01
+    alias: Cisco Catalyst 2960 1
+    kind: network
+    vendor: cisco
+    address: null
+    enabled: false
+  - id: cisco-catalyst-2960-02
+    alias: Cisco Catalyst 2960 2
+    kind: network
+    vendor: cisco
+    address: null
+    enabled: false
+  - id: rtr1.academy
+    alias: rtr1.academy (Cisco ISR4431/K9)
+    model: Cisco ISR4431/K9
+    kind: network
+    vendor: cisco
+    address: 10.7.0.101
+    enabled: true
+    snmp_profile: network_ro
+    interfaces:
+      - name: GigabitEthernet0/0/0
+        expected_up: true
+      - name: GigabitEthernet0/0/1
+        expected_up: true
+  - id: mikrotik-rb750gl-01
+    alias: MikroTik RB750GL 1
+    kind: network
+    vendor: mikrotik
+    address: null
+    enabled: false
+  - id: mikrotik-rb750gl-02
+    alias: MikroTik RB750GL 2
+    kind: network
+    vendor: mikrotik
+    address: null
+    enabled: false
+  - id: mikrotik-rb750gl-03
+    alias: MikroTik RB750GL 3
+    kind: network
+    vendor: mikrotik
+    address: null
+    enabled: false
+  - id: hikvision-camera-01
+    alias: Hikvision camera 1
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-02
+    alias: Hikvision camera 2
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-03
+    alias: Hikvision camera 3
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-04
+    alias: Hikvision camera 4
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-05
+    alias: Hikvision camera 5
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-06
+    alias: Hikvision camera 6
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-07
+    alias: Hikvision camera 7
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-08
+    alias: Hikvision camera 8
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-09
+    alias: Hikvision camera 9
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
+  - id: hikvision-camera-10
+    alias: Hikvision camera 10
+    kind: camera
+    vendor: hikvision
+    address: null
+    enabled: false
