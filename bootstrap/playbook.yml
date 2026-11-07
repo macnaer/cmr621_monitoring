@@ -8,7 +8,7 @@
     monitoring_inventory: "{{ lookup('ansible.builtin.file', playbook_dir + '/inventory/devices.yml') | from_yaml }}"
     snmp_community: "{{ lookup('ansible.builtin.file', '/run/secrets/snmp_community') | trim }}"
   tasks:
-    - name: Select Nagios Core
+    - name: Select Naemon as the monitoring core
       ansible.builtin.command:
         argv:
           - omd
@@ -16,7 +16,7 @@
           - "{{ omd_site }}"
           - set
           - CORE
-          - nagios
+          - naemon
       changed_when: false
 
     - name: Select Thruk as the default UI
@@ -50,7 +50,7 @@
 
     - name: Store the SNMP community in the runtime-only Nagios resource file
       ansible.builtin.lineinfile:
-        path: "/omd/sites/{{ omd_site }}/etc/nagios/resource.cfg"
+        path: "/omd/sites/{{ omd_site }}/etc/naemon/resource.cfg"
         regexp: '^\$USER2\$='
         line: "$USER2$={{ snmp_community }}"
         owner: "{{ omd_site }}"
@@ -78,7 +78,7 @@
     - name: Install host groups
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/nagios/hostgroups.cfg"
-        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-hostgroups.cfg"
+        dest: "/omd/sites/{{ omd_site }}/etc/naemon/conf.d/cmr621-hostgroups.cfg"
         owner: "{{ omd_site }}"
         group: "{{ omd_site }}"
         mode: "0644"
@@ -86,7 +86,7 @@
     - name: Install SNMP check command
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/nagios/commands.cfg"
-        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-commands.cfg"
+        dest: "/omd/sites/{{ omd_site }}/etc/naemon/conf.d/cmr621-commands.cfg"
         owner: "{{ omd_site }}"
         group: "{{ omd_site }}"
         mode: "0644"
@@ -94,7 +94,7 @@
     - name: Render enabled device objects from the Git inventory
       ansible.builtin.template:
         src: "{{ playbook_dir }}/templates/devices.cfg.j2"
-        dest: "/omd/sites/{{ omd_site }}/etc/nagios/conf.d/cmr621-devices.cfg"
+        dest: "/omd/sites/{{ omd_site }}/etc/naemon/conf.d/cmr621-devices.cfg"
         owner: "{{ omd_site }}"
         group: "{{ omd_site }}"
         mode: "0644"
