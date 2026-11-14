@@ -115,14 +115,12 @@ On a failed smoke test the pipeline restores the rollback image and restarts the
 
 ### Jenkins workspace
 
-The agent clones the repository into its Jenkins workspace. Use a dedicated empty directory, for example `/home/master/cmr621_agent`:
+The agent clones the repository into the workspace that Jenkins manages for the job, under the agent remote root (`/home/master/nagios/workspace`). That root must exist and be writable by the agent user, otherwise Jenkins cannot create the job workspace and the checkout fails with `Failed to exec spawn helper`:
 
 ```sh
-sudo mkdir -p /home/master/cmr621_agent
-sudo chown -R master:master /home/master/cmr621_agent
+sudo mkdir -p /home/master/nagios/workspace
+sudo chown -R master:master /home/master/nagios
 ```
-
-Set it in the job configuration under *Pipeline syntax → Advanced → Custom workspace*.
 
 Do not use the deployment directory that holds the secret files as the workspace. The Git plugin removes untracked files before checkout, which would delete the secrets. The secrets stay in `/home/master/cmr621_monitoring/secrets` and are read from there through `SECRETS_DIR`.
 ### Secrets during a pipeline run
