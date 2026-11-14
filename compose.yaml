@@ -1,6 +1,9 @@
 services:
   monitoring:
-    image: consol/omd-labs-debian:v5.70
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: cmr621/omd-labs-monitoring:1.0
     container_name: cmr621-monitoring
     restart: unless-stopped
     stop_grace_period: 45s
