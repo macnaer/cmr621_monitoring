@@ -11,7 +11,12 @@
 //   * a failed smoke test restores the previously running image.
 
 pipeline {
-  agent { label 'remote-docker' }
+  agent {
+    node {
+      label 'remote-docker'
+      customWorkspace '/home/master/cmr621_agent'
+    }
+  }
 
   options {
     timestamps()
