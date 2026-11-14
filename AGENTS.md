@@ -19,7 +19,7 @@ Act as the engineer responsible for designing, configuring, and maintaining this
 - Host: Ubuntu Server 26.04 VM with Docker Compose.
 - Current bundle: OMD Labs 5.70, with Naemon and Thruk.
 - OMD Labs 5.70 does not include Nagios Core. Its supported core choices in this deployment are Naemon, Icinga 2, or none. Do not configure Nagios Core in this image. Naemon is Nagios-compatible, but is not Nagios Core.
-- Git is the source of truth. CI is not currently used; deployment is manual and must follow successful configuration validation.
+- Git is the source of truth. A Jenkins pipeline on the `remote-docker` agent validates the configuration, builds the image, and deploys the `main` branch to the monitoring VM; other branches are validated but never deployed. A failed smoke test restores the previous image. Manual deployment stays available for recovery.
 - Telegram notifications are the final implementation phase.
 - Grafana, centralized syslog, and long-term metrics storage are currently out of scope. Do not add them without approval.
 
@@ -57,6 +57,7 @@ The source inventory is bootstrap/inventory/devices.yml.
 3. Validate the relevant YAML and rendered objects. Before deployment, validate Naemon's configuration in the OMD site, for example with naemon -v etc/naemon/naemon.cfg from the site environment.
 4. Deploy manually only after validation; keep a known-good Git revision for rollback.
 5. Report exactly which checks ran. Do not claim a Docker, Ansible, or live SNMP test passed unless it actually ran.
+6. Never let a pipeline read secret values into the workspace or logs. The Compose file resolves secret files from `${SECRETS_DIR:-./secrets}`, and only the deployment administrator keeps the files on the server.
 
 ## Agent Skills
 
