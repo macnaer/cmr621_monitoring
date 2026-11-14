@@ -42,23 +42,17 @@
           - admin_password_secret.stat.size > 0
         fail_msg: "Create secrets/omd_admin_password locally with one non-empty line before starting the container."
 
-    - name: Verify the OMD administrator tools are available
-      ansible.builtin.command:
-        argv:
-          - su
-          - -
-          - "{{ omd_site }}"
-          - -c
-          - "command -v set_admin_password && { command -v htpasswd || command -v htpasswd2; }"
-      register: admin_tools
+    - name: Locate the htpasswd binary
+      ansible.builtin.shell:
+        cmd: "command -v htpasswd || command -v htpasswd2 || true"
+      register: htpasswd_binary
       changed_when: false
-      failed_when: false
 
-    - name: Stop if the site administrator tools are missing
+    - name: Stop if the htpasswd binary is missing
       ansible.builtin.assert:
         that:
-          - admin_tools.rc == 0
-        fail_msg: "set_admin_password or htpasswd is not available for the {{ omd_site }} site user."
+          - htpasswd_binary.stdout | length > 0
+        fail_msg: "htpasswd is not installed in the image. Run 'docker compose build' to rebuild the image with apache2-utils."
 
     - name: Stat the site htpasswd file
       ansible.builtin.stat:
@@ -72,13 +66,18 @@
         fail_msg: "/omd/sites/{{ omd_site }}/etc/htpasswd is missing; the site etc volume is not initialized."
 
     - name: Set the administrator password from the Docker secret
-      ansible.builtin.command:
-        argv:
-          - su
-          - -
-          - "{{ omd_site }}"
-          - -c
-          - 'set_admin_password "$(cat /run/secrets/omd_admin_password)"'
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          password="$(cat /run/secrets/omd_admin_password)"
+          entry="$({{ htpasswd_binary.stdout }} -bnC 5 omdadmin "$password")"
+          htpasswd_file="/omd/sites/{{ omd_site }}/etc/htpasswd"
+          tmp_file="$(mktemp)"
+          grep -v '^omdadmin:' "$htpasswd_file" > "$tmp_file" || true
+          printf '%s\n' "$entry" >> "$tmp_file"
+          install -o {{ omd_site }} -g {{ omd_site }} -m 0640 "$tmp_file" "$htpasswd_file"
+          rm -f "$tmp_file"
+        executable: /bin/bash
       changed_when: false
       no_log: true
 
