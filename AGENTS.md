@@ -58,6 +58,7 @@ The source inventory is bootstrap/inventory/devices.yml.
 4. Deploy manually only after validation; keep a known-good Git revision for rollback.
 5. Report exactly which checks ran. Do not claim a Docker, Ansible, or live SNMP test passed unless it actually ran.
 6. Never let a pipeline read secret values into the workspace or logs. The Compose file resolves secret files from `${SECRETS_DIR:-./secrets}`, and only the deployment administrator keeps the files on the server.
+7. Never keep the secret files inside a Jenkins workspace. The Git plugin removes untracked files before checkout, which would destroy the secrets. Store them outside the workspace and pass the directory to Compose through `SECRETS_DIR`.
 
 ## Agent Skills
 
