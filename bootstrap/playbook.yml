@@ -30,6 +30,47 @@
           - thruk
       changed_when: false
 
+    - name: Stat the administrator password secret
+      ansible.builtin.stat:
+        path: /run/secrets/omd_admin_password
+      register: admin_password_secret
+
+    - name: Validate the administrator password secret
+      ansible.builtin.assert:
+        that:
+          - admin_password_secret.stat.exists
+          - admin_password_secret.stat.size > 0
+        fail_msg: "Create secrets/omd_admin_password locally with one non-empty line before starting the container."
+
+    - name: Verify the OMD administrator tools are available
+      ansible.builtin.command:
+        argv:
+          - su
+          - -
+          - "{{ omd_site }}"
+          - -c
+          - "command -v set_admin_password && { command -v htpasswd || command -v htpasswd2; }"
+      register: admin_tools
+      changed_when: false
+      failed_when: false
+
+    - name: Stop if the site administrator tools are missing
+      ansible.builtin.assert:
+        that:
+          - admin_tools.rc == 0
+        fail_msg: "set_admin_password or htpasswd is not available for the {{ omd_site }} site user."
+
+    - name: Stat the site htpasswd file
+      ansible.builtin.stat:
+        path: "/omd/sites/{{ omd_site }}/etc/htpasswd"
+      register: site_htpasswd
+
+    - name: Stop if the site htpasswd file is missing
+      ansible.builtin.assert:
+        that:
+          - site_htpasswd.stat.exists
+        fail_msg: "/omd/sites/{{ omd_site }}/etc/htpasswd is missing; the site etc volume is not initialized."
+
     - name: Set the administrator password from the Docker secret
       ansible.builtin.command:
         argv:
@@ -37,7 +78,7 @@
           - -
           - "{{ omd_site }}"
           - -c
-          - "set_admin_password {{ lookup('ansible.builtin.file', '/run/secrets/omd_admin_password') | trim | quote }}"
+          - 'set_admin_password "$(cat /run/secrets/omd_admin_password)"'
       changed_when: false
       no_log: true
 
