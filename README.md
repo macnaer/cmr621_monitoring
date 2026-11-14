@@ -82,7 +82,7 @@ The image uses a self-signed TLS certificate by default, so the browser will sho
 
 1. Make approved changes in Git; do not edit the live Naemon configuration independently on the VM.
 2. On the VM, pull the approved commit.
-3. Validate the Naemon configuration before restarting the core: `docker compose exec monitoring su - demo -c 'cd ~ && naemon -v etc/naemon/naemon.cfg'`. The relative paths in the configuration resolve inside the site directory, so the command has to run from the site home.
+3. Validate the Naemon configuration before restarting the core: `docker compose exec monitoring su - demo -c 'cd ~ && naemon -v tmp/naemon/naemon.cfg'`. The runtime configuration lives in `tmp/naemon/naemon.cfg` and uses paths relative to the site home, so the command has to run from that directory. The raw file in `etc/naemon/naemon.cfg` only holds the site overrides and cannot be validated on its own.
 4. Restart the core after a successful validation: `docker compose exec monitoring su - demo -c 'omd restart naemon'`.
 5. Review the Thruk UI and container logs.
 
@@ -101,7 +101,7 @@ Pipeline stages:
 5. Keep the currently running image as the rollback image.
 6. Build the image.
 7. Run an Ansible syntax check inside the built image.
-8. Deploy with `docker compose -p cmr621_monitoring up -d --force-recreate`, wait until the OMD site reports the core as running, and verify it: container state, OMD status, Naemon configuration validation, and an HTTPS request to the Thruk endpoint.
+8. Deploy with `docker compose -p cmr621_monitoring up -d --force-recreate`, wait until the OMD site reports the core as running, and verify it: container state, OMD status, validation of the runtime Naemon configuration, the list of hosts known to the core, and an HTTPS request to the Thruk endpoint.
 
 Only commits that belong to `main` are deployed. The check uses the branch name when the job runs as a multibranch pipeline and `git merge-base --is-ancestor HEAD origin/main` otherwise, because the branch condition does not apply to a plain Pipeline job. If the verification after the deployment fails, the pipeline restores the rollback image and restarts the container in the same stage.
 
@@ -123,6 +123,16 @@ sudo chown -R master:master /home/master/nagios
 ```
 
 Do not use the deployment directory that holds the secret files as the workspace. The Git plugin removes untracked files before checkout, which would delete the secrets. The secrets stay in `/home/master/cmr621_monitoring/secrets` and are read from there through `SECRETS_DIR`.
+### Verifying the monitored hosts
+
+The pipeline checks that the core actually knows every enabled device from the inventory. The helper script reads `bootstrap/inventory/devices.yml`, queries the Livestatus API of the core and compares the result:
+
+```sh
+docker compose exec monitoring python3 bootstrap/scripts/check_monitored_hosts.py \
+  /omd/sites/demo/tmp/run/live bootstrap/inventory/devices.yml
+```
+
+The script exits with 1 when an enabled device is missing from the core, which fails the deployment and restores the previous image.
 ### Secrets during a pipeline run
 
 Secret values stay on the server and are never copied into the workspace or printed. `compose.yaml` reads them from `${SECRETS_DIR:-./secrets}`, and the pipeline sets `SECRETS_DIR=/home/master/cmr621_monitoring/secrets` on the agent. The pipeline only checks that both files exist.
