@@ -4,7 +4,7 @@
 // repository is public, so the checkout needs no credentials.
 //
 // Deployment policy:
-//   * only the main branch is deployed to production;
+//   * only commits that belong to main are deployed to production;
 //   * other branches are validated and built but never deployed;
 //   * secrets are never read into the workspace or logged; the container reads
 //     them from the server directory listed in SECRETS_DIR;
@@ -17,6 +17,7 @@ pipeline {
     timestamps()
     disableConcurrentBuilds()
     buildDiscarder(logRotator(numToKeepStr: '20'))
+    skipDefaultCheckout()
     timeout(time: 30, unit: 'MINUTES')
   }
 
@@ -51,7 +52,23 @@ pipeline {
       }
     }
 
+    stage('Check branch') {
+      steps {
+        script {
+          def onMain
+          if (env.BRANCH_NAME) {
+            onMain = env.BRANCH_NAME == 'main'
+          } else {
+            onMain = sh(script: 'git merge-base --is-ancestor HEAD origin/main', returnStatus: true) == 0
+          }
+          env.IS_MAIN = onMain.toString()
+          echo "Commit belongs to main: ${env.IS_MAIN}"
+        }
+      }
+    }
+
     stage('Keep rollback image') {
+      when { environment name: 'IS_MAIN', value: 'true' }
       steps {
         sh "docker image tag ${IMAGE} ${ROLLBACK_IMAGE} || true"
       }
@@ -69,39 +86,29 @@ pipeline {
       }
     }
 
-    stage('Deploy') {
-      when { branch 'main' }
+    stage('Deploy and verify') {
+      when { environment name: 'IS_MAIN', value: 'true' }
       steps {
-        sh "docker compose -p ${COMPOSE_PROJECT} up -d --force-recreate"
-      }
-    }
-
-    stage('Smoke test') {
-      when { branch 'main' }
-      steps {
-        sh "docker compose -p ${COMPOSE_PROJECT} ps"
-        sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status'"
-        sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'"
         script {
-          def code = sh(
-            script: "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/demo/",
-            returnStdout: true
-          ).trim()
-          echo "Thruk HTTPS status: ${code}"
-          if (code.isEmpty() || code == '000') {
-            error('Thruk did not answer on the HTTPS endpoint')
+          try {
+            sh "docker compose -p ${COMPOSE_PROJECT} up -d --force-recreate"
+            sh "docker compose -p ${COMPOSE_PROJECT} ps"
+            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status'"
+            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'"
+            def code = sh(
+              script: "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/demo/",
+              returnStdout: true
+            ).trim()
+            echo "Thruk HTTPS status: ${code}"
+            if (code.isEmpty() || code == '000') {
+              error('Thruk did not answer on the HTTPS endpoint')
+            }
+          } catch (err) {
+            echo 'Deployment verification failed, restoring the previous image'
+            sh "docker image tag ${ROLLBACK_IMAGE} ${IMAGE} || true"
+            sh "docker compose -p ${COMPOSE_PROJECT} up -d --force-recreate || true"
+            throw err
           }
-        }
-      }
-    }
-  }
-
-  post {
-    failure {
-      script {
-        if (env.BRANCH_NAME == 'main') {
-          sh "docker image tag ${ROLLBACK_IMAGE} ${IMAGE} || true"
-          sh "docker compose -p ${COMPOSE_PROJECT} up -d --force-recreate || true"
         }
       }
     }
