@@ -113,6 +113,18 @@ On a failed smoke test the pipeline restores the rollback image and restarts the
 - The job must be restricted to the `remote-docker` node. The agent user needs membership in the `docker` group and a Docker Compose v2 installation.
 - The compose project name is pinned in `compose.yaml` (`name: cmr621_monitoring`) so the `omd-sites` volume keeps its name regardless of the working directory.
 
+### Jenkins workspace
+
+The agent clones the repository into its Jenkins workspace. Use a dedicated empty directory, for example `/home/master/cmr621_agent`:
+
+```sh
+sudo mkdir -p /home/master/cmr621_agent
+sudo chown -R master:master /home/master/cmr621_agent
+```
+
+Set it in the job configuration under *Pipeline syntax → Advanced → Custom workspace*.
+
+Do not use the deployment directory that holds the secret files as the workspace. The Git plugin removes untracked files before checkout, which would delete the secrets. The secrets stay in `/home/master/cmr621_monitoring/secrets` and are read from there through `SECRETS_DIR`.
 ### Secrets during a pipeline run
 
 Secret values stay on the server and are never copied into the workspace or printed. `compose.yaml` reads them from `${SECRETS_DIR:-./secrets}`, and the pipeline sets `SECRETS_DIR=/home/master/cmr621_monitoring/secrets` on the agent. The pipeline only checks that both files exist.
