@@ -7,6 +7,7 @@ Initial Docker-based implementation for the CMR621 network monitoring system.
 - Host: Ubuntu Server 26.04 VM with Docker Compose.
 - Runtime: OMD Labs 5.70 container, configured to use Naemon and Thruk.
 - Configuration source of truth: this Git repository.
+- CI: a Jenkins pipeline on the remote-docker agent deploys the main branch to the monitoring VM.
 - Notifications: Telegram is intentionally deferred to the final implementation phase.
 - Grafana and centralized syslog are out of scope for the current deployment.
 
@@ -86,6 +87,43 @@ The image uses a self-signed TLS certificate by default, so the browser will sho
 5. Review the Thruk UI and container logs.
 
 The OMD startup playbook applies the tracked inventory and configuration when the container starts. Keep a known-good Git commit available for rollback.
+
+## CI/CD with Jenkins
+
+The `Jenkinsfile` in the repository root describes the pipeline. It runs on the `remote-docker` agent, which is the monitoring VM, so the container is rebuilt and restarted in place.
+
+Pipeline stages:
+
+1. Checkout the repository on the agent.
+2. Verify the agent: Docker, Docker Compose, and the presence of both secret files.
+3. Validate the Compose file and parse the Ansible playbook and inventory YAML.
+4. Keep the currently running image as the rollback image.
+5. Build the image.
+6. Run an Ansible syntax check inside the built image.
+7. Deploy with `docker compose -p cmr621_monitoring up -d --force-recreate` (main branch only).
+8. Smoke test: container state, OMD status, Naemon configuration validation, and an HTTPS request to the Thruk endpoint.
+
+On a failed smoke test the pipeline restores the rollback image and restarts the container.
+
+### Jenkins job configuration
+
+- Job type: Pipeline, script from SCM.
+- SCM: Git, `https://github.com/macnaer/cmr621_monitoring`, branch `main`.
+- Trigger: poll the repository on a schedule, for example `*/5 * * * *`. The repository is public, so no credentials are needed.
+- The job must be restricted to the `remote-docker` node. The agent user needs membership in the `docker` group and a Docker Compose v2 installation.
+- The compose project name is pinned in `compose.yaml` (`name: cmr621_monitoring`) so the `omd-sites` volume keeps its name regardless of the working directory.
+
+### Secrets during a pipeline run
+
+Secret values stay on the server and are never copied into the workspace or printed. `compose.yaml` reads them from `${SECRETS_DIR:-./secrets}`, and the pipeline sets `SECRETS_DIR=/home/master/cmr621_monitoring/secrets` on the agent. The pipeline only checks that both files exist.
+
+Keep the secret files readable by the deployment administrator only:
+
+```sh
+chmod 600 /home/master/cmr621_monitoring/secrets/omd_admin_password
+chmod 600 /home/master/cmr621_monitoring/secrets/snmp_community
+```
+
 
 ## Current implementation boundary
 
