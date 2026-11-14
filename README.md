@@ -78,6 +78,38 @@ From the repository root:
 
 The image uses a self-signed TLS certificate by default, so the browser will show a certificate warning until a trusted certificate/reverse proxy is configured. The named Docker volume `omd-sites` persists OMD configuration and state.
 
+## Web UI access
+
+- URL: `https://10.7.99.103:8443/demo/`
+- User: `omdadmin`
+- Password: **not stored in this repository.** The value lives in `secrets/omd_admin_password` on the monitoring VM, and the Ansible playbook applies it to the site on every container start.
+
+Generate or rotate the password on the VM:
+
+```sh
+NEW=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
+printf '%s' "$NEW" | sudo tee /home/master/cmr621_monitoring/secrets/omd_admin_password >/dev/null
+sudo chmod 600 /home/master/cmr621_monitoring/secrets/omd_admin_password
+echo "$NEW"
+sudo docker compose up -d --force-recreate
+```
+
+Verify the current password without printing it:
+
+```sh
+sudo docker compose exec monitoring su - demo -c 'htpasswd -vb /omd/sites/demo/etc/htpasswd omdadmin "$(cat /run/secrets/omd_admin_password)"'
+```
+
+### Recovering access after a lockout
+
+Thruk locks an account after ten failed logins and keeps the lock until the stored state is removed, so a correct password is rejected in the meantime. Clear the lock with:
+
+```sh
+sudo docker compose exec monitoring su - demo -c 'rm -f /omd/sites/demo/var/thruk/users/omdadmin'
+```
+
+After that, log in with the user name and the current password.
+
 ## Configuration workflow without CI
 
 1. Make approved changes in Git; do not edit the live Naemon configuration independently on the VM.
