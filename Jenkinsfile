@@ -92,6 +92,18 @@ pipeline {
         script {
           try {
             sh "docker compose -p ${COMPOSE_PROJECT} up -d --force-recreate"
+            sh """
+              for i in \$(seq 1 36); do
+                if docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status' | grep -q 'naemon:.*running'; then
+                  echo 'The OMD site is running'
+                  exit 0
+                fi
+                echo "waiting for the OMD site, attempt \$i"
+                sleep 5
+              done
+              echo 'The OMD site did not start within the timeout'
+              exit 1
+            """
             sh "docker compose -p ${COMPOSE_PROJECT} ps"
             sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status'"
             sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'"
