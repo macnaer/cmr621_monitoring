@@ -101,7 +101,7 @@ Pipeline stages:
 5. Keep the currently running image as the rollback image.
 6. Build the image.
 7. Run an Ansible syntax check inside the built image.
-8. Deploy with `docker compose -p cmr621_monitoring up -d --force-recreate` and verify it: container state, OMD status, Naemon configuration validation, and an HTTPS request to the Thruk endpoint.
+8. Deploy with `docker compose -p cmr621_monitoring up -d --force-recreate`, wait until the OMD site reports the core as running, and verify it: container state, OMD status, Naemon configuration validation, and an HTTPS request to the Thruk endpoint.
 
 Only commits that belong to `main` are deployed. The check uses the branch name when the job runs as a multibranch pipeline and `git merge-base --is-ancestor HEAD origin/main` otherwise, because the branch condition does not apply to a plain Pipeline job. If the verification after the deployment fails, the pipeline restores the rollback image and restarts the container in the same stage.
 
