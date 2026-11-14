@@ -23,16 +23,26 @@ def query_hosts(socket_path):
     try:
         connection.connect(socket_path)
         connection.sendall(b"GET hosts\nOutputFormat: json\n")
+        # The Livestatus socket waits for the client to signal the end of the
+        # request by closing the write side of the connection.
+        connection.shutdown(socket.SHUT_WR)
         chunks = []
         while True:
             data = connection.recv(65536)
             if not data:
                 break
             chunks.append(data)
+    except OSError as error:
+        raise RuntimeError("could not query {0}: {1}".format(socket_path, error))
     finally:
         connection.close()
     payload = b"".join(chunks).decode("utf-8").strip()
-    return json.loads(payload) if payload else []
+    if not payload:
+        raise RuntimeError("the Livestatus socket returned an empty response")
+    try:
+        return json.loads(payload)
+    except ValueError:
+        raise RuntimeError("unexpected response from {0}: {1}".format(socket_path, payload[:200]))
 
 
 def enabled_devices(inventory_path):
@@ -50,7 +60,11 @@ def main():
     if len(sys.argv) != 3:
         print(__doc__)
         return 2
-    rows = query_hosts(sys.argv[1])
+    try:
+        rows = query_hosts(sys.argv[1])
+    except RuntimeError as error:
+        print("Livestatus query failed: {0}".format(error))
+        return 1
     if not rows:
         print("Livestatus returned no hosts")
         return 1
