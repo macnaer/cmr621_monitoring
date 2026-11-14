@@ -71,8 +71,9 @@ The HTTPS port is bound to the Docker server management address `10.7.99.103` on
 From the repository root:
 
 1. Create the two secret files described above.
-2. Run `docker compose up -d`.
-3. Open `https://10.7.99.103:8443/demo/`.
+2. Run `docker compose build` once to add `htpasswd` (from `apache2-utils`) to the image.
+3. Run `docker compose up -d`.
+4. Open `https://10.7.99.103:8443/demo/`.
 
 The image uses a self-signed TLS certificate by default, so the browser will show a certificate warning until a trusted certificate/reverse proxy is configured. The named Docker volume `omd-sites` persists OMD configuration and state.
 
