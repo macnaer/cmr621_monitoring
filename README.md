@@ -82,7 +82,7 @@ The image uses a self-signed TLS certificate by default, so the browser will sho
 
 1. Make approved changes in Git; do not edit the live Naemon configuration independently on the VM.
 2. On the VM, pull the approved commit.
-3. Validate the Naemon configuration before restarting the core: `docker compose exec monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'`.
+3. Validate the Naemon configuration before restarting the core: `docker compose exec monitoring su - demo -c 'cd ~ && naemon -v etc/naemon/naemon.cfg'`. The relative paths in the configuration resolve inside the site directory, so the command has to run from the site home.
 4. Restart the core after a successful validation: `docker compose exec monitoring su - demo -c 'omd restart naemon'`.
 5. Review the Thruk UI and container logs.
 
