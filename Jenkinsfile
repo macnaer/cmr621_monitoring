@@ -106,7 +106,8 @@ pipeline {
             """
             sh "docker compose -p ${COMPOSE_PROJECT} ps"
             sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status'"
-            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'cd ~ && naemon -v etc/naemon/naemon.cfg'"
+            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'cd ~ && naemon -v tmp/naemon/naemon.cfg'"
+            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring python3 /root/ansible_dropin/scripts/check_monitored_hosts.py /omd/sites/demo/tmp/run/live /root/ansible_dropin/inventory/devices.yml"
             def code = sh(
               script: "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/demo/",
               returnStdout: true
