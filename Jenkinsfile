@@ -106,7 +106,7 @@ pipeline {
             """
             sh "docker compose -p ${COMPOSE_PROJECT} ps"
             sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'omd status'"
-            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'naemon -v etc/naemon/naemon.cfg'"
+            sh "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring su - demo -c 'cd ~ && naemon -v etc/naemon/naemon.cfg'"
             def code = sh(
               script: "docker compose -p ${COMPOSE_PROJECT} exec -T monitoring curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/demo/",
               returnStdout: true
